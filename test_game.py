@@ -1,9 +1,11 @@
+from unittest.mock import patch
+
 import pytest
 from hypothesis import given
 from hypothesis.strategies import random_module
 from pytest import fixture
 
-from game import Deck, Card
+from game import Deck, Card, Player
 
 
 class TestGame:
@@ -48,13 +50,21 @@ class TestGame:
 
 
 class TestPlayer:
-    # def test_new_turn
+    @fixture
+    def player(self):
+        return Player('Frank', Deck())
+
     class TestAtInit:
         def test_initial_values(self):
-            pass
+            player = Player('Frank', Deck())
+            assert player.name == 'Frank'
+            assert player.health == 30
+            assert player.mana_slots == 0
 
-        def test_draws_3_cards(self):
-            pass
+        @patch.object(Player, 'draw_card')
+        def test_draws_3_cards(self, draw_card_mock):
+            _player = Player('Frank', Deck())
+            assert draw_card_mock.call_count == 3
 
     class TestNewTurn:
         class TestDrawNewCard:
@@ -98,8 +108,9 @@ class TestPlayer:
         def test_remove_card_from_hand(self):
             pass
 
-    def test_health_below_zero__set_automatically_to_zero(self):
-        pass
+    def test_health_below_zero__set_automatically_to_zero(self, player):
+        player.health = -24
+        assert player.health == 0
 
 
 class TestDeck:

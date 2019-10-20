@@ -44,6 +44,30 @@ import random
 from uuid import uuid4, UUID
 
 
+class Player:
+    def __init__(self, name, deck):
+        self.name = name
+        self._health = 30
+        self.mana_slots = 0
+
+        for _ in range(0, 3):
+            self.draw_card()
+
+    @property
+    def health(self):
+        return self._health
+
+    @health.setter
+    def health(self, new_health):
+        if new_health < 0:
+            new_health = 0
+
+        self._health = new_health
+
+    def draw_card(self):
+        pass
+
+
 class Card:
     mana_cost: int
     uuid: UUID
