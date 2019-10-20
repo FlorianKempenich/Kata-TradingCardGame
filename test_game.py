@@ -5,7 +5,7 @@ from hypothesis import given
 from hypothesis.strategies import random_module
 from pytest import fixture
 
-from game import Deck, Card, Player
+from game import Deck, Card, Player, InvalidMove
 
 
 class TestGame:
@@ -57,6 +57,10 @@ class TestPlayer:
     @fixture
     def player(self, deck):
         return Player('Frank', deck)
+
+    @fixture
+    def other_player(self):
+        return Player('Opponent', Deck())
 
     class TestAtInit:
         def test_initial_values(self):
@@ -126,23 +130,53 @@ class TestPlayer:
 
     class TestAttack:
         class TestInvalidCases:
-            def test_not_enough_mana(self):
-                pass
+            def test_not_enough_mana(self, player, other_player):
+                player.mana = 4
+                card_too_expensive = Card(7)
+                player.hand = [Card(1), Card(3), card_too_expensive]
+                with pytest.raises(InvalidMove, match=r'(?i).*not enough.*'):
+                    player.attack(other_player, card_too_expensive)
 
-            def test_can_not_attack_self(self):
-                pass
+            def test_can_not_attack_self(self, player):
+                with pytest.raises(InvalidMove, match=r'(?i).*can not attack self.*'):
+                    player.attack(player, Card(3))
 
-            def test_card_not_in_hand(self):
-                pass
+            def test_card_not_in_hand(self, player, other_player):
+                player.mana = 8
+                card_not_in_hand = Card(7)
+                player.hand = [Card(1), Card(3)]
+                with pytest.raises(InvalidMove, match=r'(?i).*not in hand.*'):
+                    player.attack(other_player, card_not_in_hand)
 
-        def test_uses_mana_equal_to_card_cost(self):
-            pass
+        @fixture
+        def attack_card(self):
+            return Card(3)
 
-        def test_damages_victim_with_dmg_equal_to_card_cost(self):
-            pass
+        @fixture
+        def player_ready_to_attack(self, player, attack_card):
+            player.mana_slots = 8
+            player.mana = 6
+            player.hand = [Card(1), attack_card, Card(7)]
+            return player
 
-        def test_remove_card_from_hand(self):
-            pass
+        def test_uses_mana(self, player_ready_to_attack, attack_card, other_player):
+            mana_before_attack = player_ready_to_attack.mana
+            player_ready_to_attack.attack(other_player, attack_card)
+            mana_after_attack = player_ready_to_attack.mana
+            assert mana_after_attack == mana_before_attack - attack_card.mana_cost
+
+        def test_damages_victim(self, player_ready_to_attack, attack_card, other_player):
+            victim_health_before_attack = other_player.health
+            player_ready_to_attack.attack(other_player, attack_card)
+            victim_health_after_attack = other_player.health
+            assert victim_health_after_attack == victim_health_before_attack - attack_card.attack_power
+
+        def test_remove_card_from_hand(self, player_ready_to_attack, attack_card, other_player):
+            hand_before_attack = player_ready_to_attack.hand.copy()
+            player_ready_to_attack.attack(other_player, attack_card)
+            hand_after_attack = player_ready_to_attack.hand
+            assert attack_card in hand_before_attack
+            assert attack_card not in hand_after_attack
 
     def test_health_below_zero__set_automatically_to_zero(self, player):
         player.health = -24
@@ -212,3 +246,11 @@ class TestDeck:
         assert deck.cards_left() == 3
         deck.draw_card()
         assert deck.cards_left() == 2
+
+
+class TestCard:
+    def test_attack_power_equals_mana_cost(self):
+        cost = 4
+        card = Card(cost)
+        assert card.mana_cost == cost
+        assert card.attack_power == cost

@@ -11,7 +11,7 @@ Gameplay
 [X] The active player receives 1 Mana slot up to a maximum of 10 total slots
 [X] The active player’s empty Mana slots are refilled
 [X] The active player draws a random card from his deck
-[-] The active player can play as many cards as he can afford. Any played card empties
+[/] The active player can play as many cards as he can afford. Any played card empties
   Mana slots and deals immediate damage to the opponent player equal to its Mana cost.
 [-] If the opponent player’s Health drops to or below zero the active player wins the game
 [-] If the active player can’t (by either having no cards left in his hand or lacking
@@ -42,6 +42,47 @@ Basic Logic for UI:
 """
 import random
 from uuid import uuid4, UUID
+
+
+class InvalidMove(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
+class Card:
+    mana_cost: int
+    attack_power: int
+    uuid: UUID
+
+    def __init__(self, mana_cost):
+        self.mana_cost = mana_cost
+        self.attack_power = mana_cost
+        self.uuid = uuid4()
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and self.uuid == other.uuid
+
+    def __repr__(self):
+        return f'Card<{self.mana_cost}>'
+
+
+class Deck:
+    START_CARDS_COST = [0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8]
+
+    def __init__(self):
+        self.cards = []
+        for cost in self.START_CARDS_COST:
+            self.cards.append(Card(cost))
+
+    def draw_card(self):
+        if not self.cards:
+            raise RuntimeError('Can not draw card! Deck is empty')
+
+        rand_index = random.randint(0, len(self.cards) - 1)
+        return self.cards.pop(rand_index)
+
+    def cards_left(self) -> int:
+        return len(self.cards)
 
 
 class Player:
@@ -86,36 +127,14 @@ class Player:
         self._increment_mana_slots()
         self._refill_mana()
 
+    def attack(self, victim: 'Player', card: Card):
+        if victim == self:
+            raise InvalidMove('Can not attack self')
+        if self.mana < card.mana_cost:
+            raise InvalidMove('Not enough Mana!')
+        if card not in self.hand:
+            raise InvalidMove('Card is not in Hand!')
 
-class Card:
-    mana_cost: int
-    uuid: UUID
-
-    def __init__(self, mana_cost):
-        self.mana_cost = mana_cost
-        self.uuid = uuid4()
-
-    def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.uuid == other.uuid
-
-    def __repr__(self):
-        return f'Card<{self.mana_cost}>'
-
-
-class Deck:
-    START_CARDS_COST = [0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8]
-
-    def __init__(self):
-        self.cards = []
-        for cost in self.START_CARDS_COST:
-            self.cards.append(Card(cost))
-
-    def draw_card(self):
-        if not self.cards:
-            raise RuntimeError('Can not draw card! Deck is empty')
-
-        rand_index = random.randint(0, len(self.cards) - 1)
-        return self.cards.pop(rand_index)
-
-    def cards_left(self) -> int:
-        return len(self.cards)
+        self.mana -= card.mana_cost
+        victim.health -= card.attack_power
+        self.hand.remove(card)
