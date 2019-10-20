@@ -1,15 +1,7 @@
+import pytest
 from pytest import fixture
 
-from game import Game
-
-
-@fixture
-def game():
-    return Game()
-
-
-def test_say_hi(game):
-    assert game.return_hi() == 'hi'
+from game import Deck
 
 
 class TestGame:
@@ -37,6 +29,13 @@ class TestGame:
 
             def test_can_not_play_after_game_finished(self):
                 pass
+
+            class TestAutomaticallyFinishTurn:
+                def test_when_no_mana_left(self):
+                    pass
+
+                def test_when_no_cards_in_hand(self):
+                    pass
 
     class TestFinishTurn:
         def test_switch_current_player(self):
@@ -102,11 +101,44 @@ class TestPlayer:
 
 
 class TestDeck:
-    def test_new_deck(self):
-        pass
+    @fixture
+    def deck(self):
+        return Deck()
 
-    def test_can_not_draw_card_on_empty_deck(self):
-        pass
+    def test_new_deck(self, deck):
+        def assert_there_are(expected_num_of_card):
+            def get_cards_with_cost(mana_cost):
+                return [card for card in deck.cards if card.mana_cost == mana_cost]
 
-    def test_draw_card_draws_random_card_from_deck(self):
-        pass
+            class Wrapper:
+                def cards_of_mana(self, mana_cost):
+                    cards_with_given_cost = get_cards_with_cost(mana_cost)
+                    assert len(cards_with_given_cost) == expected_num_of_card
+
+            return Wrapper()
+
+        assert_there_are(2).cards_of_mana(0)
+        assert_there_are(2).cards_of_mana(1)
+        assert_there_are(3).cards_of_mana(2)
+        assert_there_are(4).cards_of_mana(3)
+        assert_there_are(3).cards_of_mana(4)
+        assert_there_are(2).cards_of_mana(5)
+        assert_there_are(2).cards_of_mana(6)
+        assert_there_are(1).cards_of_mana(7)
+        assert_there_are(1).cards_of_mana(8)
+
+    def test_can_not_draw_card_on_empty_deck(self, deck):
+        deck.cards = []
+        with pytest.raises(RuntimeError, match=r'.*empty.*'):
+            deck.draw_card()
+
+    def test_draw_card_draws_random_card_from_deck(self, deck):
+        # TODO: Find better way to test randomness (probably w/ hypothesis)
+        cards_in_deck_before_draw = deck.cards.copy()
+        card = deck.draw_card()
+        assert card in cards_in_deck_before_draw
+
+    def test_drawn_card_is_not_in_deck_anymore(self, deck):
+        card = deck.draw_card()
+        cards_in_deck_after_draw = deck.cards.copy()
+        assert card not in cards_in_deck_after_draw

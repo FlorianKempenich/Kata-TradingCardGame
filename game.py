@@ -40,11 +40,36 @@ Basic Logic for UI:
 3. Display: "Game finished! Winner is {winner}"
 
 """
+import random
+from uuid import uuid4, UUID
 
 
-class Game:
+class Card:
+    mana_cost: int
+    uuid: UUID
+
+    def __init__(self, mana_cost):
+        self.mana_cost = mana_cost
+        self.uuid = uuid4()
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and self.uuid == other.uuid
+
+    def __repr__(self):
+        return f'Card<{self.mana_cost}>'
+
+
+class Deck:
+    START_CARDS_COST = [0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8]
+
     def __init__(self):
-        pass
+        self.cards = []
+        for cost in self.START_CARDS_COST:
+            self.cards.append(Card(cost))
 
-    def return_hi(self):
-        return 'hi'
+    def draw_card(self):
+        if not self.cards:
+            raise RuntimeError('Can not draw card! Deck is empty')
+
+        rand_index = random.randint(0, len(self.cards) - 1)
+        return self.cards.pop(rand_index)
