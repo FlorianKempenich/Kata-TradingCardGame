@@ -1,4 +1,6 @@
 import pytest
+from hypothesis import given
+from hypothesis.strategies import random_module
 from pytest import fixture
 
 from game import Deck
@@ -132,13 +134,16 @@ class TestDeck:
         with pytest.raises(RuntimeError, match=r'.*empty.*'):
             deck.draw_card()
 
-    def test_draw_card_draws_random_card_from_deck(self, deck):
-        # TODO: Find better way to test randomness (probably w/ hypothesis)
+    @given(random_module())
+    def test_draw_card_draws_random_card_from_deck(self, _random_module):
+        deck = Deck()  # Not using fixture because of 'hypothesis'
         cards_in_deck_before_draw = deck.cards.copy()
         card = deck.draw_card()
         assert card in cards_in_deck_before_draw
 
-    def test_drawn_card_is_not_in_deck_anymore(self, deck):
+    @given(random_module())
+    def test_drawn_card_is_not_in_deck_anymore(self, _random_module):
+        deck = Deck()  # Not using fixture because of 'hypothesis'
         card = deck.draw_card()
         cards_in_deck_after_draw = deck.cards.copy()
         assert card not in cards_in_deck_after_draw
