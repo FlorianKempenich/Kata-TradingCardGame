@@ -23,18 +23,18 @@ Without special rules
 
 ## Solution
 
-The goal of the Kata was to practice TDD, the best way to understand the solution is simply to [read the tests](/blob/master/test_game.py).
+The goal of the Kata was to practice TDD, the best way to understand the solution is simply to [read the tests](/test_game.py).
 
 
 ### Test outline
 #### Game
-![Tests outline for Game](/blob/master/img/test_game.png)
+![Tests outline for Game](/img/test_game.png)
 #### Player
-![Tests outline for Player](/blob/master/img/test_player.png)
+![Tests outline for Player](/img/test_player.png)
 #### Deck
-![Tests outline for Deck](/blob/master/img/test_deck.png)
+![Tests outline for Deck](/img/test_deck.png)
 #### Card
-![Tests outline for Card](/blob/master/img/test_card.png)
+![Tests outline for Card](/img/test_card.png)
 
 ### Domain Model
-![UML representation of the domain](/blob/master/img/model.png)
+![UML representation of the domain](/img/model.png)
