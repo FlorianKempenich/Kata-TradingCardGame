@@ -51,8 +51,12 @@ class TestGame:
 
 class TestPlayer:
     @fixture
-    def player(self):
-        return Player('Frank', Deck())
+    def deck(self):
+        return Deck()
+
+    @fixture
+    def player(self, deck):
+        return Player('Frank', deck)
 
     class TestAtInit:
         def test_initial_values(self):
@@ -61,32 +65,64 @@ class TestPlayer:
             assert player.health == 30
             assert player.mana_slots == 0
 
-        @patch.object(Player, 'draw_card')
+        @patch.object(Player, '_draw_card')
         def test_draws_3_cards(self, draw_card_mock):
             _player = Player('Frank', Deck())
             assert draw_card_mock.call_count == 3
 
-    class TestNewTurn:
-        class TestDrawNewCard:
-            def test_deck_not_empty__draw(self):
-                pass
+    class TestDrawCard:
+        @patch.object(Deck, 'draw_card')
+        def test_deck_not_empty__draw(self, deck_draw_card_mock, player, deck):
+            assert deck.cards != []
 
-            def test_deck_empty__do_not_draw(self):
-                pass
+            card_to_be_drawn = Card(4)
+            deck_draw_card_mock.return_value = card_to_be_drawn
+
+            player._draw_card()
+
+            deck_draw_card_mock.assert_called_once()
+            assert card_to_be_drawn in player.hand
+
+        @patch.object(Deck, 'draw_card')
+        def test_deck_empty__do_not_draw(self, deck_draw_card_mock, player, deck):
+            deck.cards = []
+            player._draw_card()
+            deck_draw_card_mock.assert_not_called()
+
+    class TestNewTurn:
+        @patch.object(Player, '_draw_card')
+        def test_draw_a_card(self, draw_card_mock, player):
+            player.new_turn()
+            draw_card_mock.assert_called_once()
 
         class TestManaSlots:
-            def test_increases(self):
-                pass
+            def test_increases(self, player):
+                mana_slots_before_new_turn = player.mana_slots
+                player.new_turn()
+                assert player.mana_slots == mana_slots_before_new_turn + 1
 
-            def test_can_only_increase_up_to_a_max_value(self):
-                pass
+            def test_can_only_increase_up_to_a_max_value(self, player):
+                for _ in range(0, 200):
+                    player.new_turn()
+
+                assert player.mana_slots == Player.MAX_MANA_SLOTS
 
         class TestRefillMana:
-            def test_refill_after_slot_number_increased(self):
-                pass
+            def test_refill_after_slot_number_increased(self, player):
+                player.mana_slots = 7
+                player.mana = 3
 
-            def test_when_max_number_of_slot_reached(self):
-                pass
+                player.new_turn()
+
+                assert player.mana == 8
+
+            def test_when_max_number_of_slot_reached(self, player):
+                player.mana_slots = Player.MAX_MANA_SLOTS
+                player.mana = 3
+
+                player.new_turn()
+
+                assert player.mana == Player.MAX_MANA_SLOTS
 
     class TestAttack:
         class TestInvalidCases:
