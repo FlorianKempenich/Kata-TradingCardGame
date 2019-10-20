@@ -73,3 +73,6 @@ class Deck:
 
         rand_index = random.randint(0, len(self.cards) - 1)
         return self.cards.pop(rand_index)
+
+    def cards_left(self) -> int:
+        return len(self.cards)

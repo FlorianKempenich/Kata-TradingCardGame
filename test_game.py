@@ -3,7 +3,7 @@ from hypothesis import given
 from hypothesis.strategies import random_module
 from pytest import fixture
 
-from game import Deck
+from game import Deck, Card
 
 
 class TestGame:
@@ -157,3 +157,11 @@ class TestDeck:
 
         with pytest.raises(RuntimeError, match=r'.*empty.*'):
             deck.draw_card()
+
+    @given(random_module())
+    def test_cards_left(self, _random_module):
+        deck = Deck()
+        deck.cards = [Card(0), Card(0), Card(8)]
+        assert deck.cards_left() == 3
+        deck.draw_card()
+        assert deck.cards_left() == 2
