@@ -5,48 +5,122 @@ from hypothesis import given
 from hypothesis.strategies import random_module
 from pytest import fixture
 
-from game import Deck, Card, Player, InvalidMove
+from game import Deck, Card, Player, InvalidMove, Game, GameError
 
 
 class TestGame:
+    @fixture
+    def p0(self):
+        return Player('First', Deck())
+
+    @fixture
+    def p1(self):
+        return Player('Second', Deck())
+
+    @fixture
+    def game(self, p0, p1):
+        return Game(p0, p1)
+
     class TestAtStart:
-        def test_player1_starts(self):
+        def test_player1_starts(self, game):
             # TODO: Make random
-            #
-            # Pass a mock player_1 and Test that the GameStatus is equal
-            # to the player_1 values
-            pass
+            assert game.status['current_player'] == 'First'
 
     class TestDuringTurn:
+        class TestStatus:
+            def test_list_players_by_name(self, game):
+                assert 'First' in game.status['players']
+                assert 'Second' in game.status['players']
+
+            def test_describe_key_attributes_of_players(self, game, p0: Player):
+                p0.health = 22
+                p0.mana_slots = 8
+                p0.mana = 3
+                p0_hand = [Card(3), Card(5), Card(1)]
+                p0.hand = p0_hand
+
+                assert game.status['players']['First']['health'] == 22
+                assert game.status['players']['First']['mana_slots'] == 8
+                assert game.status['players']['First']['mana'] == 3
+                assert game.status['players']['First']['hand'] == p0_hand
+
         class TestPlayCard:
-            def test_current_player_attacks_the_other_one(self):
-                pass
+            def test_current_player_attacks_the_other_one(self, game, p0, p1):
+                game.attacker = p1
+                some_card_in_p1_hand = game.status['players']['Second']['hand'][1]
 
-            def test_invalid_card__throw_error(self):
-                pass
+                with patch.object(p1, 'attack') as p1_attack_mock:
+                    game.play_card(some_card_in_p1_hand)
+                    p1_attack_mock.assert_called_with(p0, some_card_in_p1_hand)
 
-            def test_no_mana_left__automatically_finish_turn(self):
-                pass
+            def test_invalid_card__throw_error(self, game):
+                card_not_in_game = Card(3)
+                with pytest.raises(GameError, match=r'(?i).*not in hand.*'):
+                    game.play_card(card_not_in_game)
 
             def test_other_player_health_gets_to_zero__game_won(self):
-                pass
+                attacker = Player('attacker', Deck())
+                victim = Player('victim', Deck())
+                game = Game(attacker, victim)
 
-            def test_can_not_play_after_game_finished(self):
-                pass
+                victim.health = 2
+                kill_card = Card(4)
+                attacker.mana_slots = 8
+                attacker.mana = 4
+                attacker.hand = [Card(2), kill_card, Card(8)]
+                game.attacker = attacker
+
+                assert game.status['finished'] is False
+                game.play_card(kill_card)
+                assert game.status['finished'] is True
+                assert game.status['winner'] == 'attacker'
+
+            def test_can_not_play_after_game_finished(self, game, p1):
+                game.attacker = p1
+                some_card_in_p1_hand = game.status['players']['Second']['hand'][1]
+
+                game.game_finished = True
+                with pytest.raises(GameError, match=r'(?i).*game is finished'):
+                    game.play_card(some_card_in_p1_hand)
 
             class TestAutomaticallyFinishTurn:
-                def test_when_no_mana_left(self):
-                    pass
+                @patch.object(Game, 'finish_turn')
+                def test_when_no_mana_left(self, finish_turn_mock, game, p0):
+                    game.attacker = p0
 
-                def test_when_no_cards_in_hand(self):
-                    pass
+                    p0.mana = 3
+                    card_that_cost_3_mana = Card(3)
+                    p0.hand = [Card(1), card_that_cost_3_mana, Card(7)]
+
+                    finish_turn_mock.assert_not_called()
+                    game.play_card(card_that_cost_3_mana)
+                    finish_turn_mock.assert_called_once()
+
+                @patch.object(Game, 'finish_turn')
+                def test_when_no_cards_in_hand(self, finish_turn_mock, game, p0):
+                    game.attacker = p0
+
+                    p0.mana = 7
+                    last_card_in_hand = Card(3)
+                    p0.hand = [last_card_in_hand]
+
+                    finish_turn_mock.assert_not_called()
+                    game.play_card(last_card_in_hand)
+                    finish_turn_mock.assert_called_once()
 
     class TestFinishTurn:
-        def test_switch_current_player(self):
-            pass
+        def test_switch_current_player(self, game, p0: Player, p1):
+            game.attacker = p0
+            assert game.status['current_player'] == p0.name
+            game.finish_turn()
+            assert game.status['current_player'] == p1.name
 
-        def test_init_new_turn_on_next_player(self):
-            pass
+        def test_init_new_turn_on_next_player(self, game, p0, p1: Player):
+            game.attacker = p0
+            with patch.object(p1, 'new_turn') as p1_new_turn_mock:
+                p1_new_turn_mock.assert_not_called()
+                game.finish_turn()
+                p1_new_turn_mock.assert_called_once()
 
 
 class TestPlayer:
@@ -68,6 +142,7 @@ class TestPlayer:
             assert player.name == 'Frank'
             assert player.health == 30
             assert player.mana_slots == 0
+            assert player.mana == 0
 
         @patch.object(Player, '_draw_card')
         def test_draws_3_cards(self, draw_card_mock):
@@ -147,6 +222,13 @@ class TestPlayer:
                 player.hand = [Card(1), Card(3)]
                 with pytest.raises(InvalidMove, match=r'(?i).*not in hand.*'):
                     player.attack(other_player, card_not_in_hand)
+
+            def test_check_card_in_hand_before_cost(self, player, other_player):
+                player.mana = 3
+                card_not_in_hand_and_also_too_expensive = Card(7)
+                player.hand = [Card(1), Card(3)]
+                with pytest.raises(InvalidMove, match=r'(?i).*not in hand.*'):
+                    player.attack(other_player, card_not_in_hand_and_also_too_expensive)
 
         @fixture
         def attack_card(self):

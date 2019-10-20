@@ -18,15 +18,25 @@ Gameplay
   sufficient Mana to pay for any hand card) or simply doesn’t want to play another card,
   the opponent player becomes active
 
-class GameStatus {
-    Cards[] cards_in_hand
-    Int available_mana
-    String current_player_name
-
-    Boolean finished
-    Player winner
+GameStatus
+{
+    current_player: 'Frank',
+    players: {
+        'Frank': {
+            health: 23,
+            mana_slots: 8
+            hand: [Card(4), Card(2), Card(6)],
+            mana: 5
+        },
+        'Patrick': {
+            health: 21,
+            mana_slots: 7
+            hand: [Card(1), Card(8)],
+            mana: 2
+        }
+    finished: false,
+    winner: null
 }
-
 
 Basic Logic for UI:
 
@@ -45,8 +55,11 @@ from uuid import uuid4, UUID
 
 
 class InvalidMove(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
+    pass
+
+
+class GameError(Exception):
+    pass
 
 
 class Card:
@@ -93,6 +106,7 @@ class Player:
 
         self.name = name
         self.mana_slots = 0
+        self.mana = 0
         self._health = 30
         self.hand = []
 
@@ -130,11 +144,66 @@ class Player:
     def attack(self, victim: 'Player', card: Card):
         if victim == self:
             raise InvalidMove('Can not attack self')
-        if self.mana < card.mana_cost:
-            raise InvalidMove('Not enough Mana!')
         if card not in self.hand:
             raise InvalidMove('Card is not in Hand!')
+        if self.mana < card.mana_cost:
+            raise InvalidMove('Not enough Mana!')
 
         self.mana -= card.mana_cost
         victim.health -= card.attack_power
         self.hand.remove(card)
+
+
+class Game:
+    def __init__(self, player_0: Player, player_1: Player):
+        self.player_0 = player_0
+        self.player_1 = player_1
+
+        self.game_finished = False
+        self.attacker = self.player_0
+
+    @property
+    def victim(self):
+        if self.attacker == self.player_0:
+            return self.player_1
+        else:
+            return self.player_0
+
+    @property
+    def status(self):
+        def player_status(player: Player):
+            return {'health'    : player.health,
+                    'mana_slots': player.mana_slots,
+                    'mana'      : player.mana,
+                    'hand'      : player.hand}
+
+        def winner():
+            if self.game_finished:
+                return self.attacker.name
+            return None
+
+        return {'current_player': self.attacker.name,
+                'players'       : {self.player_0.name: player_status(self.player_0),
+                                   self.player_1.name: player_status(self.player_1)},
+                'finished'      : self.game_finished,
+                'winner'        : winner()}
+
+    def play_card(self, card: Card):
+        if self.game_finished:
+            raise GameError('Can not play after game is finished!')
+
+        try:
+            self.attacker.attack(self.victim, card)
+        except InvalidMove as e:
+            raise GameError(e)
+
+        if self.victim.health == 0:
+            self.game_finished = True
+
+        if self.attacker.mana == 0 or self.attacker.hand == []:
+            self.finish_turn()
+
+    def finish_turn(self):
+        if not self.game_finished:
+            self.attacker = self.victim
+            self.attacker.new_turn()
