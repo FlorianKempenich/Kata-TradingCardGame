@@ -1,7 +1,6 @@
 # Kata - Trading Card Game
 
 (Not so) Simple Kata in Python from [CodingDojo - Trading Card Game](http://codingdojo.org/kata/TradingCardGame/)  
-Without special rules
 
 ## Rules
 
@@ -19,6 +18,13 @@ Without special rules
 - The active player can play as many cards as he can afford. Any played card empties Mana slots and deals immediate damage to the opponent player equal to its Mana cost.
 - If the opponent player’s Health drops to or below zero the active player wins the game
 - If the active player can’t (by either having no cards left in his hand or lacking sufficient Mana to pay for any hand card) or simply doesn’t want to play another card, the opponent player becomes active
+
+### Special Rules
+
+- **Bleeding Out**  
+  If a player’s card deck is empty before the game is over he receives 1 damage instead of drawing a card when it’s his turn.
+- **Overload**  
+  If a player draws a card that lets his hand size become >5 that card is discarded instead of being put into his hand.
 
 
 ## Solution

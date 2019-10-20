@@ -163,10 +163,12 @@ class TestPlayer:
             assert card_to_be_drawn in player.hand
 
         @patch.object(Deck, 'draw_card')
-        def test_deck_empty__do_not_draw(self, deck_draw_card_mock, player, deck):
+        def test_deck_empty__bleed_out(self, deck_draw_card_mock, player, deck):
             deck.cards = []
+
+            health_before_bleeding_out = player.health
             player._draw_card()
-            deck_draw_card_mock.assert_not_called()
+            assert player.health == health_before_bleeding_out - 1
 
     class TestNewTurn:
         @patch.object(Player, '_draw_card')
