@@ -1,0 +1,60 @@
+@startuml
+allow_mixing
+
+actor HumanPlayer1
+actor HumanPlayer2
+class Card {
+    Int mana
+    {field} (String name)
+}
+class Deck {
+    Card[] cards
+
+    Card draw_card()
+}
+
+class Player {
+    String name
+    Int mana_slots
+    Deck deck
+
+    Int health
+    Int mana
+    Card[] hand
+
+
+    void new_turn()
+    void attack(Player victim, Card card)
+}
+
+class Game {
+    Player player_1
+    Player player_2
+    Player current_player
+
+    GameStatus getStatus()
+    void play_card(Card card)
+    void finish_turn()
+}
+class GameStatus {
+    Cards[] cards_in_hand
+    Int available_mana
+    String current_player_name
+
+    Boolean finished
+    Player winner
+}
+
+Game --> GameStatus: Returns\nto client
+HumanPlayer1 --> Game: Acts on
+HumanPlayer2 --> Game: Acts on
+
+Game "1" o-- "2" Player
+Player "1" o-- "3..*" Card
+Player "1" o-- "1" Deck
+Deck "1" *-- "0..20" Card
+
+
+
+
+@enduml
