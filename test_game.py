@@ -147,3 +147,13 @@ class TestDeck:
         card = deck.draw_card()
         cards_in_deck_after_draw = deck.cards.copy()
         assert card not in cards_in_deck_after_draw
+
+    @given(random_module())
+    def test_draw_all_cards(self, _random_module):
+        deck = Deck()  # Not using fixture because of 'hypothesis'
+
+        for _ in range(0, 20):
+            deck.draw_card()
+
+        with pytest.raises(RuntimeError, match=r'.*empty.*'):
+            deck.draw_card()
