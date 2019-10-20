@@ -163,12 +163,25 @@ class TestPlayer:
             assert card_to_be_drawn in player.hand
 
         @patch.object(Deck, 'draw_card')
-        def test_deck_empty__bleed_out(self, deck_draw_card_mock, player, deck):
+        def test_deck_empty__take_damage__bleeding_out_special_rule(self, deck_draw_card_mock, player, deck):
             deck.cards = []
 
             health_before_bleeding_out = player.health
             player._draw_card()
             assert player.health == health_before_bleeding_out - 1
+
+        @patch.object(Deck, 'draw_card')
+        def test_hand_full__throw_card_away__overload_special_rule(self, deck_draw_card_mock, player, deck):
+            card_to_be_drawn = Card(4)
+            deck_draw_card_mock.return_value = card_to_be_drawn
+
+            player.hand = [Card(1), Card(2), Card(3), Card(4), Card(5)]
+            assert len(player.hand) == Player.MAX_HAND_SIZE
+
+            player._draw_card()
+
+            deck_draw_card_mock.assert_called_once()
+            assert card_to_be_drawn not in player.hand
 
     class TestNewTurn:
         @patch.object(Player, '_draw_card')

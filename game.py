@@ -21,7 +21,7 @@ Gameplay
 Special Rules
 [X] Bleeding Out: If a player’s card deck is empty before the game is over he receives
     1 damage instead of drawing a card when it’s his turn.
-[ ] Overload: If a player draws a card that lets his hand size become >5 that card is
+[X] Overload: If a player draws a card that lets his hand size become >5 that card is
     discarded instead of being put into his hand.
 
 GameStatus
@@ -106,6 +106,7 @@ class Deck:
 
 class Player:
     MAX_MANA_SLOTS = 10
+    MAX_HAND_SIZE = 5
 
     def __init__(self, name, deck):
         self.deck = deck
@@ -133,7 +134,8 @@ class Player:
     def _draw_card(self):
         if self.deck.cards_left():
             card = self.deck.draw_card()
-            self.hand.append(card)
+            if len(self.hand) < self.MAX_HAND_SIZE:
+                self.hand.append(card)
         else:
             # 'Bleeding out' special rule
             self.health -= 1
